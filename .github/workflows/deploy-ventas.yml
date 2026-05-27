@@ -1,0 +1,32 @@
+name: Deploy Ventas Backend
+
+on:
+  push:
+    branches: [deploy]
+
+jobs:
+  deploy-ventas:
+    runs-on: ubuntu-latest
+    env:
+      AWS_REGION: us-east-1
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Deploy ventas backend via SSM
+        run: |
+          aws ssm send-command \
+            --instance-ids i-06d8b8ba427c10315 \
+            --document-name AWS-RunShellScript \
+            --comment "Deploy ventas backend" \
+            --parameters commands=["cd /home/ec2-user/back-Ventas_SpringBoot","docker login -u ${{ secrets.DOCKERHUB_USERNAME }} -p ${{ secrets.DOCKERHUB_TOKEN }}","docker pull juanvillagra/back-ventas:latest","docker stop back-ventas || true","docker rm back-ventas || true","docker run -d --name back-ventas -p 8080:8080 --restart always juanvillagra/back-ventas:latest"] \
+            --timeout-seconds 600
